@@ -15,7 +15,7 @@ const User = mongoose.model('Users', {
 
 async function userExists(userName) {
   try {
-    const data = await User.findOne({ userName: userName }).exec();
+    const data = await User.findOne({ userName: userName })
     if (data) {
       return true;
     }
@@ -30,7 +30,7 @@ async function userExists(userName) {
 
 async function validateUserNameAndPassword(userName, password) {
   try {
-    const data = await User.findOne({ userName: userName, password: password }).exec();
+    const data = await User.findOne({ userName: userName, password: password })
     if (data) {
       return true;
     }
