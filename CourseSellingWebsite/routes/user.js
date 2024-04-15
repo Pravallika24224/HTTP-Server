@@ -2,34 +2,24 @@ const { Router } = require("express");
 const router = Router();
 const userMiddleware = require("../middleware/user");
 const { User, Course } = require('../db')
-
-async function userExists(userName) {
-  try {
-    const data = await User.findOne({ userName: userName })
-    if (data) {
-      return true;
-    }
-    else {
-      return false
-    }
-  } catch (err) {
-    console.error(err, "err");
-    return false;
-  }
-}
+const jwt = require("jsonwebtoken")
+const JWT_SECRET = require('../config')
 
 // User Routes
 router.post('/signup', async (req, res) => {
   const userName = req.body.userName
   const password = req.body.password
-  const isExist = await userExists(userName)
-  if (!isExist) {
+  const ifExists = await User.findOne({ userName: userName })
+
+  if (!ifExists) {
     await User.create({
       userName: userName,
       password: password
     })
+    const token = jwt.sign({ userName: userName }, JWT_SECRET)
     res.json({
-      message: 'User created successfully'
+      message: 'User created successfully',
+      token: token
     })
   }
   else {
@@ -39,6 +29,31 @@ router.post('/signup', async (req, res) => {
   }
 });
 
+router.post('/login', async (req, res) => {
+  const userName = req.body.userName
+  const password = req.body.password
+  const ifExists = await User.findOne({ userName: userName })
+  if (ifExists) {
+    const validateCreds = await User.findOne({ userName: userName, password: password })
+    if (validateCreds) {
+      var token = jwt.sign({ userName: userName }, JWT_SECRET)
+      res.status(200).json({
+        message: "User logged in successfully",
+        token: token
+      })
+    }
+    else {
+      res.status(403).json({
+        message: "Incorrect userName or Password"
+      })
+    }
+  }
+  else {
+    res.json({
+      message: "Please Signin first"
+    })
+  }
+})
 router.get('/courses', async (req, res) => {
   const courses = await Course.findOne({})
   res.status(200).json({
@@ -66,12 +81,12 @@ router.post('/courses/:courseId', userMiddleware, async (req, res) => {
 
 router.get('/purchasedCourses', userMiddleware, async (req, res) => {
   const userName = req.headers.username
-  const UserDetails = await User.findOne({userName: userName})
+  const UserDetails = await User.findOne({ userName: userName })
   const courses = await Course.find({
     _id: {
-        "$in": UserDetails.purchasedCourses
+      "$in": UserDetails.purchasedCourses
     }
-});
+  });
   res.status(200).send(courses)
 });
 
